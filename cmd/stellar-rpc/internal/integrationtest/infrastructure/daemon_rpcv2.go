@@ -70,11 +70,13 @@ func (d *rpcv2Daemon) start() {
 	opts := rpcv2.Options{
 		Logger: d.log,
 		Flags:  d.flags(),
-		OnListen: func(rpc, admin net.Addr) {
+	}
+	if !i.dontWaitRPC {
+		opts.OnListen = func(rpc, admin net.Addr) {
 			i.testPorts.RPCPort = tcpPort(rpc)
 			i.testPorts.RPCAdminPort = tcpPort(admin)
 			close(listening)
-		},
+		}
 	}
 
 	// Nothing above can fail once these are set: close waits on stopped, and
@@ -91,11 +93,13 @@ func (d *rpcv2Daemon) start() {
 	// The daemon binds its read listener only after it has caught up with the
 	// history archive, so this wait can be as long as the health wait. A daemon
 	// that exits first leaves its error on done for waitForRPC to report.
-	select {
-	case <-listening:
-	case <-d.stopped:
-	case <-time.After(rpcHealthyTimeout):
-		i.t.Fatalf("rpcv2 daemon did not bind its listeners within %s", rpcHealthyTimeout)
+	if !i.dontWaitRPC {
+		select {
+		case <-listening:
+		case <-d.stopped:
+		case <-time.After(rpcHealthyTimeout):
+			i.t.Fatalf("rpcv2 daemon did not bind its listeners within %s", rpcHealthyTimeout)
+		}
 	}
 }
 

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"iter"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,6 +30,7 @@ import (
 	"github.com/stellar/stellar-rpc/cmd/stellar-rpc/internal/rpcv2/geometry"
 	"github.com/stellar/stellar-rpc/cmd/stellar-rpc/internal/rpcv2/query"
 	"github.com/stellar/stellar-rpc/cmd/stellar-rpc/internal/rpcv2/rpcv2test"
+	"github.com/stellar/stellar-rpc/cmd/stellar-rpc/internal/version"
 )
 
 // openCatalogAt opens a catalog over the daemon's on-disk KV under dataDir for
@@ -846,4 +849,34 @@ func TestNewLogger(t *testing.T) {
 
 	_, err = newLogger(config.LoggingConfig{Level: "bogus", Format: "text"})
 	require.Error(t, err)
+}
+
+func TestNewCaptiveCoreOpeners_UserAgent(t *testing.T) {
+	ing := coreFileIngestion(t, writeCaptiveCoreFile(t, ""))
+	core, err := newCaptiveCoreOpeners(ing, t.TempDir(), silentLogger())
+	require.NoError(t, err)
+
+	want := "stellar-rpc/" + version.Version + "/captivecore"
+	live, ok := core.live.(*captiveCoreOpener)
+	require.True(t, ok)
+	assert.Equal(t, want, live.config.UserAgent)
+
+	backfillOpener, ok := core.backfill.(*captiveCoreOpener)
+	require.True(t, ok)
+	assert.Equal(t, want, backfillOpener.config.UserAgent)
+}
+
+func TestNewArchivePool_UserAgent(t *testing.T) {
+	var gotUserAgent atomic.Value
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotUserAgent.Store(r.Header.Get("User-Agent"))
+		_, _ = w.Write([]byte(`{"version": 1, "server": "test", "currentLedger": 63, "currentBuckets": []}`))
+	}))
+	defer srv.Close()
+
+	pool, err := newArchivePool(context.Background(), []string{srv.URL}, silentLogger())
+	require.NoError(t, err)
+	_, err = pool.GetRootHAS()
+	require.NoError(t, err)
+	assert.Equal(t, "stellar-rpc/"+version.Version, gotUserAgent.Load())
 }

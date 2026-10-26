@@ -164,6 +164,7 @@ type Test struct {
 	shutdownOnce           sync.Once
 	shutdown               func()
 	onlyRPC                bool
+	dontWaitRPC            bool
 	ignoreLedgerCloseTimes bool
 
 	datastoreConfigFunc func(*config.Config)
@@ -209,6 +210,7 @@ func NewTest(t testing.TB, cfg *TestConfig) *Test {
 
 		if cfg.OnlyRPC != nil {
 			i.onlyRPC = true
+			i.dontWaitRPC = cfg.OnlyRPC.DontWait
 			i.testPorts.TestCorePorts = cfg.OnlyRPC.CorePorts
 			shouldWaitForRPC = !cfg.OnlyRPC.DontWait
 

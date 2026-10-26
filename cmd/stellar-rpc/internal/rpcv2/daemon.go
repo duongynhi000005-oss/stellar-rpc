@@ -723,7 +723,7 @@ func newCaptiveCoreOpener(
 			HistoryArchiveURLs: ing.HistoryArchiveURLs,
 			Log:                logger.WithField("subservice", "stellar-core"),
 			Toml:               coreToml,
-			UserAgent:          "stellar-rpc-fullhistory",
+			UserAgent:          "stellar-rpc/" + version.Version + "/captivecore",
 		},
 	}, nil
 }
@@ -741,8 +741,11 @@ func (c *captiveCoreOpener) OpenCore(ctx context.Context) (ledgerbackend.LedgerS
 // pool entirely when none are configured).
 func newArchivePool(ctx context.Context, urls []string, logger *supportlog.Entry) (rootHASGetter, error) {
 	pool, err := historyarchive.NewArchivePool(urls, historyarchive.ArchiveOptions{
-		ConnectOptions: storage.ConnectOptions{Context: ctx},
-		Logger:         logger.WithField("subservice", "history-archive"),
+		ConnectOptions: storage.ConnectOptions{
+			Context:   ctx,
+			UserAgent: "stellar-rpc/" + version.Version,
+		},
+		Logger: logger.WithField("subservice", "history-archive"),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("connect history archives: %w", err)
