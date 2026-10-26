@@ -269,7 +269,7 @@ func TestGetLedgerInfoUsesProvidedLedgerTime(t *testing.T) {
 	defer freeLedgerInfo(ledgerInfo)
 
 	require.EqualValues(t, params.LedgerTime, ledgerInfo.timestamp)
-	require.EqualValues(t, params.LedgerSeq, ledgerInfo.sequence_number)
+	require.EqualValues(t, params.LedgerSeq+1, ledgerInfo.sequence_number)
 	require.EqualValues(t, params.ProtocolVersion, ledgerInfo.protocol_version)
 	require.EqualValues(t, params.BucketListSize, ledgerInfo.bucket_list_size)
 }

@@ -176,9 +176,14 @@ func GetPreflight(ctx context.Context, params Parameters) (Preflight, error) {
 }
 
 func getLedgerInfo(params Parameters) C.ledger_info_t {
+	// Simulate transactions as if executing on the next ledger (latestLedger + 1).
+	// Because params.LedgerSeq is the most recently closed ledger, simulating at
+	// params.LedgerSeq treats extend_ttl as a no-op (0 rent fee and 0 TTL-entry
+	// write fee) whenever entries were already extended to extend_to in the latest
+	// closed ledger, causing InsufficientRefundableFee upon inclusion (#918).
 	return C.ledger_info_t{
 		network_passphrase: C.CString(params.NetworkPassphrase),
-		sequence_number:    C.uint32_t(params.LedgerSeq),
+		sequence_number:    C.uint32_t(params.LedgerSeq + 1),
 		protocol_version:   C.uint32_t(params.ProtocolVersion),
 		timestamp:          C.uint64_t(params.LedgerTime),
 		base_reserve:       defaultBaseReserve,
